@@ -2,7 +2,12 @@
 
 <head>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-
+<style>
+	input{
+		border: 1px solid black !important;
+		font-size: 16px !important;
+	}
+</style>
 </head>
 
 <body class="xudip-body">
@@ -90,12 +95,12 @@
 	// 	return fullNamesArray;
 	// }
 
-	// var playerNames = generateplayerNamesArray(11);
-	// var umpires = generateplayerNamesArray(2);
+	// resetAll()
+	// playerNames = generateplayerNamesArray(11);
+	// umpires = generateplayerNamesArray(2);
 	// console.log(playerNames);
 	// console.log(umpires);
-
-	// var gameDate = moment(new Date());
+	// gameDate = moment('2023-05-19');
 	// generateInputs(playerNames.length);
 	// // DUMMY DATA EXAMPLE START
 
@@ -115,12 +120,14 @@
 				var playersSheet = workbook.SheetNames[0];
 				var playersWorksheet = workbook.Sheets[playersSheet];
 				playerNames = XLSX.utils.sheet_to_json(playersWorksheet, { header: 1 });
+				playerNames = playerNames.filter(i => i != '');
 
 				//get and set umpires name
 				var umpiresSheet = workbook.SheetNames[1];
 				var umpiresWorksheet = workbook.Sheets[umpiresSheet];
 				umpires = XLSX.utils.sheet_to_json(umpiresWorksheet, { header: 1 });
-
+				umpires = umpires.filter(i => i != '');
+				
 				generateInputs(playerNames.length);
 
 			};
