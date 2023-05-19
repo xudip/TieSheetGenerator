@@ -1,0 +1,311 @@
+<html>
+
+<head>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+</head>
+
+<body class="xudip-body">
+	<h1>Test Tournament</h1>
+	<div>
+		<span>Tournament StartDate</span>
+		<input type="date" id="startDate" />
+	</div>
+	<input type="file" id="excelFile" />
+	<button id="readExcelBtn" class="btn btn-primary">Read Excel</button>
+	<button class="btn btn-secondary" id="printToPdfBtn">Print</button>
+
+
+	<!-- Alert Modal -->
+	<div id="alertModal" class="modal fade" tabindex="-1" role="dialog">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title">Alert</h5>
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+						<span aria-hidden="true">&times;</span>
+					</button>
+				</div>
+				<div class="modal-body">
+					<p id="alertMessage"></p>
+				</div>
+				<div class="modal-footer">
+					<button type="button " class="btn btn-primary" data-dismiss="modal">Close</button>
+
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+
+</html>
+<script src="https://code.jquery.com/jquery-3.7.0.slim.js"
+	integrity="sha256-7GO+jepT9gJe9LB4XFf8snVOjX3iYNb0FHYr5LI1N5c=" crossorigin="anonymous"></script>
+<script src="https://rawgit.com/moment/moment/2.2.1/min/moment.min.js"></script>
+<script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+
+<script>
+
+
+	var playerNames = [];
+	var umpires = [];
+	var gameDate = moment($("#startDate").val());
+
+	var gameCount = 1;
+	var gameColumnCount = 0;
+	var gameHeight = 125;
+	var firstColumnInserted = false;
+	var nameIndex = 0;
+	var umprieIndex = 0;
+
+
+
+	// // DUMMY DATA EXAMPLE START
+
+	// // Array of first names
+	// var firstNames = ["John", "Alice", "Michael", "Emma", "David", "Olivia", "James", "Sophia", "Robert", "Emily"];
+
+	// // Array of last names
+	// var lastNames = ["Smith", "Johnson", "Brown", "Taylor", "Miller", "Anderson", "Wilson", "Clark", "Walker", "Davis"];
+
+	// // Generate a random full name
+	// function generateRandomFullName() {
+	// 	var randomFirstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+	// 	var randomLastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+	// 	var fullName = randomFirstName + " " + randomLastName;
+	// 	return fullName;
+	// }
+
+	// // Generate an array of random full names
+	// function generateplayerNamesArray(count) {
+	// 	var fullNamesArray = [];
+	// 	for (var i = 0; i < count; i++) {
+	// 		var randomFullName = generateRandomFullName();
+	// 		fullNamesArray.push(randomFullName);
+	// 	}
+	// 	return fullNamesArray;
+	// }
+
+	// var playerNames = generateplayerNamesArray(11);
+	// var umpires = generateplayerNamesArray(2);
+	// console.log(playerNames);
+	// console.log(umpires);
+
+	// var gameDate = moment(new Date());
+	// generateInputs(playerNames.length);
+	// // DUMMY DATA EXAMPLE START
+
+
+	$(document).ready(function () {
+		$('#readExcelBtn').click(function () {
+			var fileInput = document.getElementById('excelFile');
+			var file = fileInput.files[0];
+			var reader = new FileReader();
+
+			reader.onload = function (e) {
+				resetAll();
+				var data = new Uint8Array(e.target.result);
+				var workbook = XLSX.read(data, { type: 'array' });
+
+				//get and set players name
+				var playersSheet = workbook.SheetNames[0];
+				var playersWorksheet = workbook.Sheets[playersSheet];
+				playerNames = XLSX.utils.sheet_to_json(playersWorksheet, { header: 1 });
+
+				//get and set umpires name
+				var umpiresSheet = workbook.SheetNames[1];
+				var umpiresWorksheet = workbook.Sheets[umpiresSheet];
+				umpires = XLSX.utils.sheet_to_json(umpiresWorksheet, { header: 1 });
+
+				generateInputs(playerNames.length);
+
+			};
+
+			reader.readAsArrayBuffer(file);
+		});
+
+		$('#printToPdfBtn').click(function () {
+			var pdf = new jsPDF();
+
+			var element = $('.left-game');
+			var elementWidth = element.clientWidth;
+			var elementHeight = element.clientHeight;
+
+			// Calculate the number of pages required to print the content
+			var totalPages = Math.ceil(elementHeight / pdf.internal.pageSize.getHeight());
+
+			// Loop through the pages and print each section of the content
+			for (var i = 0; i < totalPages; i++) {
+				var position = -i * pdf.internal.pageSize.getHeight();
+
+				// Add a new page to the PDF
+				if (i > 0) {
+					pdf.addPage();
+				}
+
+				// Set the scroll position to simulate scrolling to the next section
+				element.scrollTop = position;
+
+				// Capture the visible content within the element and add it to the PDF
+				pdf.html(element, {
+					x: 0,
+					y: -position,
+					html2canvas: {
+						scrollX: 0,
+						scrollY: 0,
+						useCORS: true
+					},
+					callback: function () {
+						// Check if this is the last page and save the PDF
+						if (i === totalPages - 1) {
+							pdf.save('content.pdf');
+						}
+					}
+				});
+			}
+		});
+	});
+
+	function resetAll() {
+		playerNames = [];
+		umpires = [];
+		gameDate = moment($("#startDate").val());
+
+		$('.xudip-input').remove();
+		$('.xudip-line').remove();
+		$('.game-container').remove();
+		$('.xudip-body').append(
+			'<div class="game-container" style="display: block;"><div class="left-game" style="' +
+			' width: auto;' +
+			'   min-width: 100px;' +
+			' flex: 1; display: flex; padding: 5px;' +
+			'"></div>'
+		);
+		gameCount = 1;
+		gameColumnCount = 0;
+		gameHeight = 125;
+		firstColumnInserted = false;
+		nameIndex = 0;
+		umprieIndex = 0;
+	}
+
+	function getNextNonWeekendDate(startDate) {
+		let currentDate = moment(startDate);
+		currentDate = currentDate.add(1, 'day');
+		while (currentDate.day() === 0 || currentDate.day() === 6) {
+			currentDate = currentDate.add(1, 'day');
+		}
+
+		return currentDate;
+	}
+
+	function generateInputs(totalCount) {
+		if (totalCount <= 2) {
+			$('.left-game').append(
+				"<div style='margin-top: 5px; position: relative; display: flex;flex-direction: column;justify-content: space-around; height:fit-content' class='game-column-" +
+				gameColumnCount +
+				"'>" +
+				'</div>'
+			);
+			if (gameColumnCount > 0) {
+				$('.left-game .game-' + (gameCount)).append(
+					' <div class="connect-input-line" style=" ' +
+					'  border: 1px solid black; ' +
+					'  height: 50%; ' +
+					'  width: 10px; ' +
+					'  top: 75px; ' +
+					'  left: -30px; ' +
+					'  border-left: 0; ' +
+					'  margin: 10px; ' +
+					'  "> ' +
+					'	</div > '
+				);
+			}
+			umprieIndex = (++umprieIndex >= umpires.length ? 0 : umprieIndex);
+			console.log(umprieIndex);
+			$('.left-game .game-' + (gameCount)).append(
+
+				"<div>" +
+				'<div>Game ' +
+				gameCount + ' - ' + umpires[umprieIndex] +
+				'</div>' +
+				"<div class='xudip-input'><input /></div>" +
+				"<div class='xudip-input'><input /></div>" +
+
+				"</div>"
+			);
+			return;
+		}
+		var totalNumberOfGames = Number((totalCount / 2).toFixed(0));
+		var isOdd = totalNumberOfGames % 2 == 1;
+
+		totalNumberOfGames = isOdd ? totalNumberOfGames + 1 : totalNumberOfGames;
+		$('.left-game').append(
+			"<div style='margin-top: 5px;display: flex;flex-direction: column;justify-content: space-around;  height:fit-content' class='game-column-" +
+			gameColumnCount +
+			"'>" +
+			'</div>'
+		);
+
+		var gamesInColumn = totalNumberOfGames / 2;
+		var isGamesInColumnOdd = gamesInColumn % 2;
+		gamesInColumn = isGamesInColumnOdd ? gamesInColumn + 1 : gamesInColumn;
+		for (let index = 0; index < totalNumberOfGames; index++) {
+			// if (index % 2 == 0) {
+			var isBye = (isOdd && index == (totalNumberOfGames - 1));
+			$('.left-game .game-column-' + gameColumnCount).append(
+				"<div style='padding-top: 0px; position: relative; display: flex;flex-direction: row;justify-content: center;align-items:center; height: " + (gameHeight) + "px;" +
+				";' class='game-" +
+				gameCount +
+				"'>" +
+				"</div>"
+			);
+			// }
+			if (!isBye) {
+
+				if (gameColumnCount > 0) {
+					$('.left-game .game-' + (gameCount)).append(
+						' <div class="connect-input-line" style=" ' +
+						'  border: 1px solid black; ' +
+						'  height: 50%; ' +
+						'  width: 10px; ' +
+						'  top: 75px; ' +
+						'  left: -30px; ' +
+						'  border-left: 0; ' +
+						'  margin: 10px; ' +
+						'  "> ' +
+						'	</div > '
+					);
+				}
+			}
+			umprieIndex = (++umprieIndex >= umpires.length ? 0 : umprieIndex);
+			gameDate = getNextNonWeekendDate(gameDate);
+			console.log(umprieIndex);
+			$('.left-game .game-' + (gameCount)).append(
+				"<div style='margin-top: 10px'>" +
+				// '<div>Game ' +
+				// gameCount + ' - ' +
+				// '</div>' +
+				'<div>' +
+				(umpires[umprieIndex]) +
+				'</div>' +
+				'<i>' +
+				(gameDate).format('MMMM D, ddd, YYYY') +
+				'</i>' +
+				"<div class='xudip-input'><input value='" + (isBye ? 'BYE' : playerNames[nameIndex++] ?? '') + "'/></div>" +
+				"<div class='xudip-input'><input value='" + (isBye ? 'BYE' : playerNames[nameIndex++] ?? '') + "'/></div>" +
+
+				"</div>"
+			);
+			gameCount++;
+		}
+		gameHeight = gameHeight * 2;
+		gameColumnCount++;
+		firstColumnInserted = true;
+		generateInputs(totalNumberOfGames);
+	}
+</script>
