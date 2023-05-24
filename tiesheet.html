@@ -2,25 +2,57 @@
 
 <head>
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-<style>
-	input{
-		border: 1px solid black !important;
-		font-size: 16px !important;
-	}
-</style>
+	<style>
+		@media print {
+			@page {
+				size: landscape
+			}
+		}
+
+		input {
+			border: 1px solid black !important;
+			font-size: 20 !important;
+		}
+
+		body {
+			page-break-before: avoid;
+			width: 100%;
+			height: 100%;
+			zoom: 140%;
+			padding-left: 15px;
+		}
+	</style>
 </head>
 
 <body class="xudip-body">
 	<h1>Test Tournament</h1>
-	<div>
-		<span>Tournament StartDate</span>
-		<input type="date" id="startDate" />
+	<div class="col-md-12 user-inputs">
+		<div class="row">
+			<div class="col-md-4">
+				<label>Tournament StartDate </label>
+				<input class="form-control" type="date" id="startDate" />
+
+			</div>
+			<div class="col-md-4">
+				<label>Number of Games Per Day: </label>
+				<input type="number" class="form-control" id="number-of-games-per-day"
+					aria-describedby="number-of-games-per-day" placeholder="Numer of Games">
+			</div>
+			<div class="col-md-4 excel-container">
+				<label>Upload Excel: </label>
+				<div class="row">
+					<div class="col-md-6">
+						<input class="form-control" type="file" id="excelFile" />
+					</div>
+					<div class="col-md-6">
+						<button id="readExcelBtn" class="btn btn-primary">Generate Tiesheet</button>
+						<button id="print-a4" class="btn btn-secondary">Print</button>
+					</div>
+				</div>
+
+			</div>
+		</div>
 	</div>
-	<input type="file" id="excelFile" />
-	<button id="readExcelBtn" class="btn btn-primary">Read Excel</button>
-	<button class="btn btn-secondary" id="printToPdfBtn">Print</button>
-
-
 	<!-- Alert Modal -->
 	<div id="alertModal" class="modal fade" tabindex="-1" role="dialog">
 		<div class="modal-dialog" role="document">
@@ -66,7 +98,8 @@
 	var firstColumnInserted = false;
 	var nameIndex = 0;
 	var umprieIndex = 0;
-
+	var numberOfGamesInADay = 1;
+	var increaseDay = 0;
 
 
 	// // DUMMY DATA EXAMPLE START
@@ -106,6 +139,19 @@
 
 
 	$(document).ready(function () {
+		$('#print-a4').click(function () {
+			$('.user-inputs').hide();
+			$('.game-container').append('<div class="row columns-1-4"></div><div class="row columns-5-8"></div><div class="row columns-9-12"></div>')
+			$($(".left-game").children()).each(function (ind, item) {
+				if (ind < 3) {
+					$(".columns-1-4").append(item);
+				} else if (ind >= 3 && ind < 7) {
+					$(".columns-1-4").append(item);
+				} else if (ind >= 7 && ind <= 11) {
+					$(".columns-1-4").append(item);
+				}
+			})
+		});
 		$('#readExcelBtn').click(function () {
 			var fileInput = document.getElementById('excelFile');
 			var file = fileInput.files[0];
@@ -127,7 +173,7 @@
 				var umpiresWorksheet = workbook.Sheets[umpiresSheet];
 				umpires = XLSX.utils.sheet_to_json(umpiresWorksheet, { header: 1 });
 				umpires = umpires.filter(i => i != '');
-				
+
 				generateInputs(playerNames.length);
 
 			};
@@ -192,6 +238,7 @@
 			' flex: 1; display: flex; padding: 5px;' +
 			'"></div>'
 		);
+
 		gameCount = 1;
 		gameColumnCount = 0;
 		gameHeight = 125;
@@ -202,10 +249,19 @@
 
 	function getNextNonWeekendDate(startDate) {
 		let currentDate = moment(startDate);
-		currentDate = currentDate.add(1, 'day');
+		increaseDay = (increaseDay + 1 / Number($("#number-of-games-per-day").val())).toFixed(2);
+		increaseDay = Number(increaseDay);
+
+		if (increaseDay >= 1) {
+			currentDate = currentDate.add(1, 'day');
+			increaseDay = 0
+		}
+
 		while (currentDate.day() === 0 || currentDate.day() === 6) {
 			currentDate = currentDate.add(1, 'day');
 		}
+
+
 
 		return currentDate;
 	}
@@ -213,10 +269,18 @@
 	function generateInputs(totalCount) {
 		if (totalCount <= 2) {
 			$('.left-game').append(
-				"<div style='margin-top: 5px; position: relative; display: flex;flex-direction: column;justify-content: space-around; height:fit-content' class='game-column-" +
+				"<div style='margin-top: 5px;display: flex;flex-direction: column;justify-content: space-around;  height:fit-content' class='game-column-" +
 				gameColumnCount +
 				"'>" +
 				'</div>'
+			);
+
+			$('.left-game .game-column-' + gameColumnCount).append(
+				"<div style='padding-top: 0px; position: relative; display: flex;flex-direction: row;justify-content: center;align-items:center; height: " + (gameHeight) + "px;" +
+				";' class='game-" +
+				gameCount +
+				"'>" +
+				"</div>"
 			);
 			if (gameColumnCount > 0) {
 				$('.left-game .game-' + (gameCount)).append(
@@ -235,13 +299,18 @@
 			umprieIndex = (++umprieIndex >= umpires.length ? 0 : umprieIndex);
 			console.log(umprieIndex);
 			$('.left-game .game-' + (gameCount)).append(
-
-				"<div>" +
-				'<div>Game ' +
-				gameCount + ' - ' + umpires[umprieIndex] +
+				"<div style='margin-top: 10px'>" +
+				// '<div>Game ' +
+				// gameCount + ' - ' +
+				// '</div>' +
+				'<div>' +
+				'' + gameCount + '. ' + (umpires[umprieIndex]) +
 				'</div>' +
-				"<div class='xudip-input'><input /></div>" +
-				"<div class='xudip-input'><input /></div>" +
+				'<i>' +
+				(gameDate).format('MMMM D, ddd, YYYY') +
+				'</i>' +
+				"<div class='xudip-input'><input value='" + (isBye ? 'BYE' : playerNames[nameIndex++] ?? '') + "'/></div>" +
+				"<div class='xudip-input'><input value='" + (isBye ? 'BYE' : playerNames[nameIndex++] ?? '') + "'/></div>" +
 
 				"</div>"
 			);
@@ -257,6 +326,7 @@
 			"'>" +
 			'</div>'
 		);
+
 
 		var gamesInColumn = totalNumberOfGames / 2;
 		var isGamesInColumnOdd = gamesInColumn % 2;
@@ -298,7 +368,7 @@
 				// gameCount + ' - ' +
 				// '</div>' +
 				'<div>' +
-				(umpires[umprieIndex]) +
+				'' + gameCount + '. ' + (umpires[umprieIndex]) +
 				'</div>' +
 				'<i>' +
 				(gameDate).format('MMMM D, ddd, YYYY') +
